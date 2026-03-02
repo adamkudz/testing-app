@@ -73,14 +73,14 @@ export default defineEventHandler(async (event) => {
   )
 
   const dailyData: Record<string, { count: number; scores: number[] }> = {}
-  for (let d = 0; d < 30; d++) {
+  for (let d = 0; d <= 30; d++) {
     const date = new Date(thirtyDaysAgo.getTime() + d * 24 * 60 * 60 * 1000)
-    const key = date.toISOString().split('T')[0]
+    const key = date.toISOString().split('T')[0]!
     dailyData[key] = { count: 0, scores: [] }
   }
 
   for (const a of recentAttempts) {
-    const key = new Date(a.completed_at).toISOString().split('T')[0]
+    const key = new Date(a.completed_at).toISOString().split('T')[0]!
     if (dailyData[key]) {
       dailyData[key].count++
       if ((a as any).total > 0) {

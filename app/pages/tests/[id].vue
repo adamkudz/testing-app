@@ -255,8 +255,8 @@ watch(test, (t) => {
       answers[q.id] = {}
     }
   }
-  // Start timer
-  if ((t as any).timeLimitSeconds) {
+  // Start timer (client-only — setInterval is not available during SSR)
+  if (import.meta.client && (t as any).timeLimitSeconds) {
     timeRemaining.value = (t as any).timeLimitSeconds
     timerInterval = setInterval(() => {
       timeRemaining.value--

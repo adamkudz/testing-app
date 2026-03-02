@@ -1,6 +1,9 @@
 export default defineEventHandler(async (event) => {
   requireAdmin(event)
   const testId = getRouterParam(event, 'id')
+  if (!testId) {
+    throw createError({ statusCode: 400, statusMessage: 'Missing test ID' })
+  }
   const query = getQuery(event)
   const supabase = useServiceSupabase()
 
@@ -58,8 +61,8 @@ export default defineEventHandler(async (event) => {
   const sortedScores = [...scores].sort((a, b) => a - b)
   const medianScore = sortedScores.length
     ? sortedScores.length % 2 === 0
-      ? (sortedScores[sortedScores.length / 2 - 1] + sortedScores[sortedScores.length / 2]) / 2
-      : sortedScores[Math.floor(sortedScores.length / 2)]
+      ? ((sortedScores[sortedScores.length / 2 - 1] ?? 0) + (sortedScores[sortedScores.length / 2] ?? 0)) / 2
+      : sortedScores[Math.floor(sortedScores.length / 2)] ?? 0
     : 0
   const highestScore = scores.length ? Math.max(...scores) : 0
   const lowestScore = scores.length ? Math.min(...scores) : 0
@@ -82,14 +85,14 @@ export default defineEventHandler(async (event) => {
       if (!questionStats[ans.question_id]) {
         questionStats[ans.question_id] = { total: 0, missed: 0, wrongAnswers: {} }
       }
-      questionStats[ans.question_id].total++
+      const qStat = questionStats[ans.question_id]!
+      qStat.total++
       if (!ans.is_correct) {
-        questionStats[ans.question_id].missed++
+        qStat.missed++
         const wrongKey = typeof ans.user_answer === 'object'
           ? JSON.stringify(ans.user_answer)
           : String(ans.user_answer || 'No answer')
-        questionStats[ans.question_id].wrongAnswers[wrongKey] =
-          (questionStats[ans.question_id].wrongAnswers[wrongKey] || 0) + 1
+        qStat.wrongAnswers[wrongKey] = (qStat.wrongAnswers[wrongKey] || 0) + 1
       }
     }
   }

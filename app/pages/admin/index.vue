@@ -49,6 +49,12 @@
                 Edit
               </NuxtLink>
               <button
+                @click="copyLink(test.id)"
+                class="text-sm text-gray-600 hover:text-gray-700 font-medium"
+              >
+                {{ copiedId === test.id ? 'Copied!' : 'Copy Link' }}
+              </button>
+              <button
                 @click="deleteTest(test.id)"
                 class="text-sm text-red-600 hover:text-red-700 font-medium"
               >
@@ -66,6 +72,15 @@
 definePageMeta({ layout: false })
 
 const { data: tests, pending, refresh } = await useFetch('/api/admin/tests')
+
+const copiedId = ref<string | null>(null)
+
+function copyLink(id: string) {
+  if (!import.meta.client) return
+  navigator.clipboard.writeText(`${window.location.origin}/tests/${id}`)
+  copiedId.value = id
+  setTimeout(() => { copiedId.value = null }, 1500)
+}
 
 async function deleteTest(id: string) {
   if (!confirm('Are you sure you want to delete this test?')) return
