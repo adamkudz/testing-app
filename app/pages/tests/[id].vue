@@ -73,6 +73,33 @@
       </div>
     </div>
 
+    <!-- Intro screen -->
+    <div v-else-if="!started" class="bg-white rounded-lg shadow-sm border border-gray-200 p-10 text-center">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ test.title }}</h1>
+      <p class="text-gray-500 mb-8">Welcome! Please read the details below before you begin.</p>
+
+      <p v-if="(test as any).description" class="text-gray-700 mb-8 text-left max-w-lg mx-auto">
+        {{ (test as any).description }}
+      </p>
+
+      <div class="flex justify-center gap-6 text-sm text-gray-500 mb-10">
+        <span>📝 {{ (test as any).questions?.length }} questions</span>
+        <span v-if="(test as any).timeLimitSeconds">
+          ⏱️ {{ Math.round((test as any).timeLimitSeconds / 60) }} min time limit
+        </span>
+        <span v-if="(test as any).passingScore">
+          🎯 {{ (test as any).passingScore }}% to pass
+        </span>
+      </div>
+
+      <button
+        @click="startTest"
+        class="bg-indigo-600 text-white px-8 py-3 rounded-md hover:bg-indigo-700 text-base font-semibold"
+      >
+        Start the Test
+      </button>
+    </div>
+
     <!-- Taking the test -->
     <div v-else>
       <!-- Header with progress and timer -->
@@ -230,11 +257,12 @@ const testId = route.params.id as string
 
 const { data: test, pending } = await useFetch(`/api/tests/${testId}`)
 
+const started = ref(false)
 const currentIndex = ref(0)
 const answers = reactive<Record<string, any>>({})
 const results = ref<any>(null)
 const submitting = ref(false)
-const startedAt = ref(new Date().toISOString())
+const startedAt = ref('')
 
 // Timer
 const timeRemaining = ref(0)
@@ -255,9 +283,13 @@ watch(test, (t) => {
       answers[q.id] = {}
     }
   }
-  // Start timer (client-only — setInterval is not available during SSR)
-  if (import.meta.client && (t as any).timeLimitSeconds) {
-    timeRemaining.value = (t as any).timeLimitSeconds
+}, { immediate: true })
+
+function startTest() {
+  started.value = true
+  startedAt.value = new Date().toISOString()
+  if ((test.value as any)?.timeLimitSeconds) {
+    timeRemaining.value = (test.value as any).timeLimitSeconds
     timerInterval = setInterval(() => {
       timeRemaining.value--
       if (timeRemaining.value <= 0) {
@@ -266,7 +298,7 @@ watch(test, (t) => {
       }
     }, 1000)
   }
-}, { immediate: true })
+}
 
 // Shuffled matching targets
 const shuffledTargets = computed(() => {
@@ -360,9 +392,9 @@ async function submitTest() {
 
 function retakeTest() {
   results.value = null
+  started.value = false
   currentIndex.value = 0
   Object.keys(answers).forEach((key) => delete answers[key])
-  startedAt.value = new Date().toISOString()
 
   // Reinitialize multi-select and matching
   if (test.value) {
@@ -370,18 +402,6 @@ function retakeTest() {
       if (q.type === 'multi_select') answers[q.id] = []
       if (q.type === 'matching') answers[q.id] = {}
     }
-  }
-
-  // Restart timer
-  if (test.value && (test.value as any).timeLimitSeconds) {
-    timeRemaining.value = (test.value as any).timeLimitSeconds
-    timerInterval = setInterval(() => {
-      timeRemaining.value--
-      if (timeRemaining.value <= 0) {
-        clearInterval(timerInterval!)
-        submitTest()
-      }
-    }, 1000)
   }
 }
 
